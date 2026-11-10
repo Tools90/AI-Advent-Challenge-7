@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Console · День 7</title>
+<style>
+  :root {
+    --bg: #edf1f6;
+    --grid: rgba(30, 58, 95, .055);
+    --card: #ffffff;
+    --ink: #13243a;
+    --muted: #65748a;
+    --line: #d8e0ea;
+    --line-2: #c4d0de;
+    --navy: #10243b;
+    --blue: #2563eb;
+    --blue-soft: #e9f0ff;
+    --amber: #e08a00;
+    --amber-soft: #fff3dc;
+    --green: #0f8a5f;
+    --green-soft: #e6f6ef;
+    --red: #c73838;
+    --red-soft: #fdecec;
+    --mono: Consolas, "Courier New", monospace;
+    --shadow: 0 14px 38px rgba(18, 40, 70, .08);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  button, input, textarea { font-family: inherit; }
+
+  .app { height: 100%; display: flex; flex-direction: column; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 20px;
+    background: var(--navy);
+    color: #fff;
+    border-bottom: 3px solid var(--amber);
+  }
+
+  .logo {
+    width: 42px; height: 42px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    border-radius: 9px;
+    background: var(--amber);
+    color: #1b1200;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .brand h1 { margin: 0; font-size: 17px; letter-spacing: .3px; }
+  .brand p { margin: 2px 0 0; font-size: 11px; color: #9fb2c9; }
+
+  .topbar .spacer { flex: 1; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .06);
+    color: #c6d4e6;
+    white-space: nowrap;
+  }
+  .badge.ok { color: #8fe3bb; border-color: rgba(143, 227, 187, .35); }
+  .badge.warn { color: #ffd184; border-color: rgba(255, 209, 132, .35); }
+
+  .layout { flex: 1; display: flex; min-height: 0; }
+
+  .sidebar {
+    width: 370px;
+    flex: 0 0 auto;
+    padding: 16px;
+    border-right: 1px solid var(--line);
+    background: rgba(255, 255, 255, .55);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .block {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+
+  .block h3 {
+    margin: 0 0 9px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .tool {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--blue);
+    border-radius: 9px;
+    padding: 9px 10px;
+    background: #fff;
+    margin-bottom: 7px;
+  }
+  .tool:last-child { margin-bottom: 0; }
+  .tool-name { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--blue); }
+  .tool-desc { margin-top: 4px; font-size: 11px; line-height: 1.45; color: var(--muted); }
+  .tool details { margin-top: 6px; }
+  .tool summary { font-size: 10.5px; color: var(--muted); cursor: pointer; }
+  .tool pre {
+    margin: 6px 0 0;
+    padding: 8px;
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    line-height: 1.4;
+    max-height: 180px;
+    overflow: auto;
+    white-space: pre;
+  }
+
+  .sample {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .sample:hover { border-color: var(--blue); background: var(--blue-soft); }
+  .sample:last-child { margin-bottom: 0; }
+
+  .primary, .ghost {
+    border-radius: 9px;
+    cursor: pointer;
+    transition: .14s;
+  }
+  .primary {
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--blue);
+    border: 1px solid var(--blue);
+  }
+  .primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .primary:disabled { opacity: .5; cursor: default; }
+
+  .ghost {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--line-2);
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--navy); }
+  .ghost.full { width: 100%; }
+
+  .hint { margin: 6px 0 0; font-size: 10.5px; color: var(--muted); font-family: var(--mono); }
+
+  .chat-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  .chat-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, .6);
+  }
+  .chat-head h2 { margin: 0; font-size: 15px; }
+  .chat-head span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .messages::-webkit-scrollbar { width: 8px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+
+  .empty {
+    margin: auto;
+    max-width: 520px;
+    padding: 40px 26px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    border: 1.5px dashed var(--line-2);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .55);
+  }
+  .empty strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+
+  .turn { display: flex; flex-direction: column; gap: 10px; }
+
+  .user-row { display: flex; justify-content: flex-end; }
+  .user-bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 11px 11px 3px 11px;
+    background: var(--navy);
+    color: #fff;
+    font-size: 13.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .agent-row { display: flex; justify-content: flex-start; }
+  .agent-bubble {
+    max-width: 82%;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 11px 11px 11px 3px;
+    background: var(--card);
+    font-size: 13.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    box-shadow: var(--shadow);
+  }
+  .agent-bubble strong { font-weight: 700; }
+  .agent-bubble code {
+    padding: 1px 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #eef2f7;
+    border-radius: 4px;
+  }
+  .agent-bubble pre.md-code {
+    margin: 6px 0;
+    padding: 8px 10px;
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: auto;
+    white-space: pre-wrap;
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 8px; padding-left: 6px; }
+  .agent-work {
+    margin-left: 28px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .68);
+    overflow: hidden;
+  }
+  .agent-work summary {
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+  .agent-work summary::-webkit-details-marker { display: none; }
+  .agent-work summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 14px;
+    color: var(--blue);
+  }
+  .agent-work[open] summary::before { content: "▾"; }
+  .agent-work[open] summary {
+    border-bottom: 1px solid var(--line);
+    background: #f7f9fc;
+  }
+  .agent-work .steps { padding: 10px 12px; }
+
+  .step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .step-rail {
+    width: 18px;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 7px;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--amber);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--amber);
+  }
+  .step-line { width: 2px; flex: 1; background: var(--line-2); min-height: 12px; margin-top: 3px; }
+
+  .step-card {
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    background: #f7f9fc;
+    border-bottom: 1px solid var(--line);
+  }
+  .tool-name { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--blue); }
+  .step-meta { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .chip {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .step-body { padding: 9px 11px; display: flex; flex-direction: column; gap: 7px; }
+  .step-label { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .step pre {
+    margin: 3px 0 0;
+    padding: 8px;
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 1.45;
+    max-height: 180px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .label-row { display: flex; align-items: center; gap: 8px; }
+  .label-row .step-label { flex: 1; }
+  .expand {
+    padding: 3px 8px;
+    font-size: 9.5px;
+    color: var(--blue);
+    background: #fff;
+    border: 1px solid #c9d8f5;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .expand:hover { background: var(--blue-soft); }
+  dialog.fullscreen {
+    width: 96vw;
+    height: 92vh;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--ink);
+  }
+  dialog.fullscreen::backdrop { background: rgba(8, 18, 32, .72); }
+  .fs-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--navy);
+    color: #fff;
+  }
+  .fs-head h3 { margin: 0; font-size: 13px; flex: 1; }
+  .fs-close {
+    width: 30px; height: 30px;
+    display: grid; place-items: center;
+    color: #c6d4e6;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .fs-close:hover { color: #fff; border-color: #fff; }
+  .fs-body {
+    height: calc(92vh - 51px);
+    overflow: auto;
+    padding: 14px;
+  }
+  .fs-body pre {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .step.error .step-card { border-color: #e7b1b1; }
+  .step.error .dot { background: var(--red); box-shadow: 0 0 0 1px var(--red); }
+  .step.error .tool-name { color: var(--red); }
+  .step.llm .dot { background: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+  .step.llm .tool-name { color: var(--blue); }
+  .step.tool .dot { background: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+  .step.tool .tool-name { color: var(--amber); }
+
+  .turn-meta {
+    margin-left: 28px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .turn-error {
+    margin-left: 28px;
+    padding: 9px 11px;
+    border: 1px solid #e7b1b1;
+    background: var(--red-soft);
+    color: #8c2020;
+    border-radius: 9px;
+    font-size: 12px;
+    white-space: pre-wrap;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 20px 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid var(--blue-soft);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading strong { display: block; font-size: 13px; }
+  .loading span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .error-box {
+    margin: 0 20px 12px;
+    padding: 10px 12px;
+    border: 1px solid #e7b1b1;
+    background: var(--red-soft);
+    color: #8c2020;
+    border-radius: 9px;
+    font-size: 12px;
+    white-space: pre-wrap;
+  }
+
+  .composer {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    padding: 14px 18px 16px;
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, .72);
+  }
+  .composer textarea {
+    flex: 1;
+    resize: none;
+    min-height: 46px;
+    max-height: 160px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    outline: none;
+  }
+  .composer textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .composer .primary { height: 46px; padding: 0 20px; }
+
+  @media (max-width: 980px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); max-height: 48vh; }
+    .chat-panel { min-height: 52vh; }
+    .brand p { display: none; }
+    .badge { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="logo">D6</div>
+    <div class="brand">
+      <h1>Agent Console</h1>
+      <p>AI Advent Challenge · День 7 · контекст агента сохраняется</p>
+    </div>
+    <div class="spacer"></div>
+    <span class="badge" id="modelBadge">deepseek-flash</span>
+    <span class="badge" id="toolsBadge">tools: —</span>
+    <span class="badge" id="configBadge">ключ: —</span>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="block">
+        <h3>Инструменты</h3>
+        <div id="toolList"></div>
+        <p class="hint">Модель сама выбирает инструмент и аргументы.</p>
+      </div>
+
+      <div class="block">
+        <h3>Проверочные запросы</h3>
+        <div id="samples"></div>
+      </div>
+
+      <button class="ghost full" id="resetBtn" type="button">Сбросить контекст</button>
+      <p class="hint" id="historyInfo">История: 0 ходов</p>
+    </aside>
+
+    <section class="chat-panel">
+      <div class="chat-head">
+        <h2>Диалог с агентом</h2>
+        <span>цикл: запрос → tool_calls → результат → ответ</span>
+      </div>
+
+      <div class="messages" id="messages">
+        <div class="empty">
+          <strong>Агент готов</strong>
+          Задайте вопрос. Если понадобится время, калькулятор или валюта — агент вызовет инструмент и покажет шаги.
+        </div>
+      </div>
+
+      <div class="loading" id="loading" hidden>
+        <div class="spinner"></div>
+        <div>
+          <strong>Агент работает…</strong>
+          <span id="loadingMeta">0 с</span>
+        </div>
+      </div>
+
+      <div class="error-box" id="errorBox" hidden></div>
+
+      <form class="composer" id="form">
+        <textarea id="input" rows="1" placeholder="Сообщение агенту… (Enter — отправить, Shift+Enter — новая строка)" autofocus></textarea>
+        <button class="primary" id="sendBtn" type="submit">Отправить</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<dialog class="fullscreen" id="fullscreenDialog">
+  <div class="fs-head">
+    <h3 id="fsTitle">JSON</h3>
+    <button class="fs-close" id="fsClose" type="button">✕</button>
+  </div>
+  <div class="fs-body"><pre id="fsContent"></pre></div>
+</dialog>
+
+<script>
+  const state = {
+    turns: [],
+    tools: [],
+    model: "",
+    configured: false,
+    busy: false,
+    timer: null
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function h(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+  }
+
+  function fmtMs(ms) {
+    if (ms == null || isNaN(ms)) return "—";
+    return ms >= 1000 ? (ms / 1000).toFixed(1) + " с" : Math.round(ms) + " мс";
+  }
+
+  function fmtTokens(n) {
+    if (n == null || isNaN(n)) return "—";
+    n = Math.round(n);
+    return n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+  }
+
+  function prettyJSON(value) {
+    if (value == null || value === "") return "";
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  function renderMarkdown(text) {
+    let out = h(text);
+    out = out.replace(/```([\s\S]*?)```/g, (_, code) => `<pre class="md-code">${code.replace(/^\n+|\n+$/g, "")}</pre>`);
+    out = out.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+    out = out.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    return out;
+  }
+
+  async function api(path, options) {
+    const res = await fetch(path, options);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  async function init() {
+    try {
+      const data = await api("/api/state");
+      state.turns = data.turns || [];
+      state.tools = data.tools || [];
+      state.model = data.model || "";
+      state.configured = !!data.configured;
+
+      $("modelBadge").textContent = state.model || "deepseek-flash";
+      $("toolsBadge").textContent = "tools: " + state.tools.length;
+
+      const configBadge = $("configBadge");
+      configBadge.textContent = state.configured ? "ключ: есть" : "ключ: нет";
+      configBadge.className = "badge " + (state.configured ? "ok" : "warn");
+
+      renderTools();
+      renderSamples();
+      renderMessages();
+      updateHistoryInfo();
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  function renderTools() {
+    $("toolList").innerHTML = state.tools.map((tool) => {
+      const fn = tool.function || {};
+      return `<div class="tool">
+        <div class="tool-name">${h(fn.name)}</div>
+        <div class="tool-desc">${h(fn.description || "")}</div>
+        <details>
+          <summary>схема аргументов</summary>
+          <pre>${h(JSON.stringify(fn.parameters || {}, null, 2))}</pre>
+        </details>
+      </div>`;
+    }).join("");
+  }
+
+  function renderSamples() {
+    const samples = [
+      "Что такое HTTP?",
+      "Сколько будет 17 * 23?",
+      "Который сейчас час в Москве?",
+      "Сколько рублей в 15% от 200 долларов?"
+    ];
+    $("samples").innerHTML = samples.map((text) =>
+      `<button class="sample" type="button" data-prompt="${h(text)}">${h(text)}</button>`
+    ).join("");
+  }
+
+  function renderMessages() {
+    const box = $("messages");
+    if (state.turns.length === 0) {
+      box.innerHTML = `<div class="empty">
+        <strong>Агент готов</strong>
+        Задайте вопрос. Если понадобится время, калькулятор или валюта — агент вызовет инструмент и покажет шаги.
+      </div>`;
+      return;
+    }
+
+    box.innerHTML = state.turns.map((turn, index) => renderTurn(turn, index)).join("");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function renderTurn(turn, index) {
+    const steps = (turn.steps || []).map((step, stepIndex) => renderStep(step, stepIndex)).join("");
+    const stepCount = (turn.steps || []).length;
+    const stepWord = stepCount === 1 ? "шаг" : "шагов";
+    const reply = turn.reply
+      ? `<div class="agent-row"><div class="agent-bubble">${renderMarkdown(turn.reply)}</div></div>`
+      : "";
+    const error = turn.error
+      ? `<div class="turn-error">Ошибка: ${h(turn.error)}</div>`
+      : "";
+    const meta = `шагов модели: ${turn.calls || 0} · токены: ${fmtTokens(turn.usage?.totalTokens || 0)} · время: ${fmtMs(turn.latencyMs)}`;
+
+    return `<div class="turn">
+      <div class="user-row"><div class="user-bubble">${h(turn.user)}</div></div>
+      ${steps ? `<details class="agent-work">
+        <summary>Работа агента · ${stepCount} ${stepWord}</summary>
+        <div class="steps">${steps}</div>
+      </details>` : ""}
+      ${reply}
+      ${error}
+      <div class="turn-meta">${h(meta)}</div>
+    </div>`;
+  }
+
+  function renderStep(step, index) {
+    const type = step.type || "tool";
+    const error = step.error ? `<div class="step-label">ошибка</div><pre>${h(step.error)}</pre>` : "";
+
+    if (type === "llm") {
+      const request = prettyJSON(step.request);
+      const response = prettyJSON(step.response);
+      return `<div class="step llm ${step.error ? "error" : ""}">
+        <div class="step-rail"><div class="dot"></div><div class="step-line"></div></div>
+        <div class="step-card">
+          <div class="step-head">
+            <span class="tool-name">LLM</span>
+            <span class="chip">call #${index + 1}</span>
+            <span class="step-meta">${fmtMs(step.latencyMs)}</span>
+          </div>
+          <div class="step-body">
+            ${request ? `<div>
+              <div class="label-row">
+                <span class="step-label">запрос к LLM</span>
+                <button class="expand" type="button" data-title="LLM request" data-json="${h(request)}">на весь экран</button>
+              </div>
+              <pre>${h(request)}</pre>
+            </div>` : ""}
+            ${response ? `<div>
+              <div class="label-row">
+                <span class="step-label">ответ LLM</span>
+                <button class="expand" type="button" data-title="LLM response" data-json="${h(response)}">на весь экран</button>
+              </div>
+              <pre>${h(response)}</pre>
+            </div>` : ""}
+            ${error}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    const args = prettyJSON(step.arguments);
+    const result = prettyJSON(step.result);
+    return `<div class="step tool ${step.error ? "error" : ""}">
+      <div class="step-rail"><div class="dot"></div><div class="step-line"></div></div>
+      <div class="step-card">
+        <div class="step-head">
+          <span class="tool-name">${h(step.tool)}</span>
+          <span class="chip">tool_call #${index + 1}</span>
+          <span class="step-meta">${fmtMs(step.latencyMs)}</span>
+        </div>
+        <div class="step-body">
+          ${args ? `<div><div class="step-label">аргументы</div><pre>${h(args)}</pre></div>` : ""}
+          ${result ? `<div><div class="step-label">результат</div><pre>${h(result)}</pre></div>` : ""}
+          ${error}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function updateHistoryInfo() {
+    $("historyInfo").textContent = "История: " + state.turns.length + " ходов";
+  }
+
+  function showError(message) {
+    $("errorBox").hidden = false;
+    $("errorBox").textContent = message;
+  }
+
+  function hideError() {
+    $("errorBox").hidden = true;
+    $("errorBox").textContent = "";
+  }
+
+  function setBusy(value) {
+    state.busy = value;
+    $("sendBtn").disabled = value;
+    $("input").disabled = value;
+    $("loading").hidden = !value;
+    if (value) {
+      const started = Date.now();
+      $("loadingMeta").textContent = "0 с";
+      state.timer = setInterval(() => {
+        $("loadingMeta").textContent = Math.floor((Date.now() - started) / 1000) + " с";
+      }, 250);
+    } else if (state.timer) {
+      clearInterval(state.timer);
+      state.timer = null;
+    }
+  }
+
+  function autoResize() {
+    const input = $("input");
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 160) + "px";
+  }
+
+  async function send(text) {
+    const message = text.trim();
+    if (!message || state.busy) return;
+
+    hideError();
+    $("input").value = "";
+    autoResize();
+
+    state.turns.push({ user: message, pending: true });
+    renderMessages();
+    setBusy(true);
+
+    try {
+      const turn = await api("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      state.turns.pop();
+      state.turns.push(turn);
+      renderMessages();
+      updateHistoryInfo();
+    } catch (err) {
+      state.turns.pop();
+      renderMessages();
+      showError(err.message);
+    } finally {
+      setBusy(false);
+      $("input").focus();
+    }
+  }
+
+  async function resetChat() {
+    if (state.busy) return;
+    if (!confirm("Сбросить контекст и очистить историю?")) return;
+    try {
+      await api("/api/chat/reset", { method: "POST" });
+      state.turns = [];
+      renderMessages();
+      updateHistoryInfo();
+      hideError();
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    send($("input").value);
+  });
+
+  $("input").addEventListener("input", autoResize);
+  $("input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      $("form").requestSubmit();
+    }
+  });
+
+  $("samples").addEventListener("click", (e) => {
+    const btn = e.target.closest(".sample");
+    if (!btn) return;
+    send(btn.dataset.prompt);
+  });
+
+  $("resetBtn").addEventListener("click", resetChat);
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".expand");
+    if (!btn) return;
+    $("fsTitle").textContent = btn.dataset.title || "JSON";
+    $("fsContent").textContent = btn.dataset.json || "";
+    $("fullscreenDialog").showModal();
+  });
+
+  $("fsClose").addEventListener("click", () => $("fullscreenDialog").close());
+  $("fullscreenDialog").addEventListener("click", (e) => {
+    if (e.target === $("fullscreenDialog")) $("fullscreenDialog").close();
+  });
+
+  init();
+</script>
+</body>
+</html>
